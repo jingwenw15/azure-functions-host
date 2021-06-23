@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using Microsoft.Azure.WebJobs.Script.Description;
@@ -31,7 +32,7 @@ using ParameterBindingType = Microsoft.Azure.WebJobs.Script.Grpc.Messages.Parame
 
 namespace Microsoft.Azure.WebJobs.Script.Grpc
 {
-    internal class GrpcWorkerChannel : IRpcWorkerChannel, IDisposable
+    internal class GrpcWorkerChannel : IRpcWorkerChannel, IDisposable, IRpcWorkerConcurrencyChannel
     {
         private readonly IScriptEventManager _eventManager;
         private readonly RpcWorkerConfig _workerConfig;
@@ -39,6 +40,7 @@ namespace Microsoft.Azure.WebJobs.Script.Grpc
         private readonly IEnvironment _environment;
         private readonly IOptionsMonitor<ScriptApplicationHostOptions> _applicationHostOptions;
         private readonly ISharedMemoryManager _sharedMemoryManager;
+        private readonly IOptions<RpcWorkerConcurrencyOptions> _concurrencyOptions;
 
         private IDisposable _functionLoadRequestResponseEvent;
         private bool _disposed;
@@ -64,6 +66,7 @@ namespace Microsoft.Azure.WebJobs.Script.Grpc
         private TaskCompletionSource<bool> _workerInitTask = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         private TimeSpan _functionLoadTimeout = TimeSpan.FromMinutes(10);
         private bool _isSharedMemoryDataTransferEnabled;
+        private RpcWorkerChannelMonitor _monitor;
 
         internal GrpcWorkerChannel(
            string workerId,
@@ -75,7 +78,8 @@ namespace Microsoft.Azure.WebJobs.Script.Grpc
            int attemptCount,
            IEnvironment environment,
            IOptionsMonitor<ScriptApplicationHostOptions> applicationHostOptions,
-           ISharedMemoryManager sharedMemoryManager)
+           ISharedMemoryManager sharedMemoryManager,
+           IOptions<RpcWorkerConcurrencyOptions> concurrencyOptions)
         {
             _workerId = workerId;
             _eventManager = eventManager;
@@ -87,6 +91,7 @@ namespace Microsoft.Azure.WebJobs.Script.Grpc
             _environment = environment;
             _applicationHostOptions = applicationHostOptions;
             _sharedMemoryManager = sharedMemoryManager;
+            _concurrencyOptions = concurrencyOptions;
 
             _workerCapabilities = new GrpcCapabilities(_workerChannelLogger);
 
@@ -115,6 +120,8 @@ namespace Microsoft.Azure.WebJobs.Script.Grpc
             _startLatencyMetric = metricsLogger?.LatencyEvent(string.Format(MetricEventNames.WorkerInitializeLatency, workerConfig.Description.Language, attemptCount));
 
             _state = RpcWorkerChannelState.Default;
+
+            _monitor = new RpcWorkerChannelMonitor(this, _concurrencyOptions);
         }
 
         public string Id => _workerId;
@@ -145,6 +152,83 @@ namespace Microsoft.Azure.WebJobs.Script.Grpc
 
         public async Task<WorkerStatus> GetWorkerStatusAsync()
         {
+            return await GetWorkerStatusAsync(true);
+        }
+
+        public WorkerStatus GetWorkerStatus()
+        {
+            return new WorkerStatus()
+            {
+                ProcessStats = _rpcWorkerProcess.GetStats(),
+                RpcWorkerStats = _monitor.GetStats(),
+            };
+        }
+
+        public async Task<WorkerStatus> GetWorkerStatusAsync(bool sendWorkerStatusResquest)
+        {
+            // This path uses Sacale controller call "admin/host/ping"
+            var workerStatus = new WorkerStatus();
+
+            TimeSpan? workerStatusLatency = await GetWorkerStatusResponseAsync(null);
+            if (workerStatusLatency != null)
+            {
+                workerStatus.Latency = workerStatusLatency.Value;
+                _workerChannelLogger.LogDebug($"[HostMonitor] Worker status request took {workerStatusLatency.Value.TotalMilliseconds}ms");
+            }
+
+            // get the process stats for the worker
+            var workerProcessStats = _rpcWorkerProcess.GetStats();
+            workerStatus.ProcessStats = workerProcessStats;
+
+            if (workerProcessStats.CpuLoadHistory.Any())
+            {
+                string formattedLoadHistory = string.Join(",", workerProcessStats.CpuLoadHistory);
+                int executingFunctionCount = FunctionInputBuffers.Sum(p => p.Value.Count);
+                _workerChannelLogger.LogDebug($"[HostMonitor] Worker process stats: EffectiveCores={_environment.GetEffectiveCoresCount()}, ProcessId={_rpcWorkerProcess.Id}, ExecutingFunctions={executingFunctionCount}, CpuLoadHistory=({formattedLoadHistory}), AvgLoad={workerProcessStats.CpuLoadHistory.Average()}, MaxLoad={workerProcessStats.CpuLoadHistory.Max()}");
+            }
+
+            return workerStatus;
+        }
+
+        public async Task<TimeSpan?> GetWorkerStatusResponseAsync(TimeSpan? timeout = null)
+        {
+            TimeSpan? result = null;
+
+            if (!string.IsNullOrEmpty(_workerCapabilities.GetCapabilityState(RpcWorkerConstants.WorkerStatus)))
+            {
+                // get the worker's current status
+                // this will include the OOP worker's channel latency in the request, which can be used upstream
+                // to make scale decisions
+                var message = new StreamingMessage
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    WorkerStatusRequest = new WorkerStatusRequest()
+                };
+
+                var sw = Stopwatch.StartNew();
+                var tcs = new TaskCompletionSource<bool>();
+                if (timeout != null)
+                {
+                    var ct = new CancellationTokenSource((int)timeout.Value.TotalMilliseconds);
+                    ct.Token.Register(() =>
+                    {
+                        ReceiveWorkerStatusResponse(message.RequestId, new WorkerStatusResponse());
+                    }, useSynchronizationContext: false);
+                }
+                if (_workerStatusRequests.TryAdd(message.RequestId, tcs))
+                {
+                    SendStreamingMessage(message);
+                    await tcs.Task;
+                    sw.Stop();
+                    result = sw.Elapsed;
+                }
+            }
+
+            return result;
+        }
+
+        public async Task<WorkerStatus> GetWorkerStatusAsync(TimeSpan? timeout = null)
+        {
             var workerStatus = new WorkerStatus();
 
             if (!string.IsNullOrEmpty(_workerCapabilities.GetCapabilityState(RpcWorkerConstants.WorkerStatus)))
@@ -160,6 +244,14 @@ namespace Microsoft.Azure.WebJobs.Script.Grpc
 
                 var sw = Stopwatch.StartNew();
                 var tcs = new TaskCompletionSource<bool>();
+                if (timeout != null)
+                {
+                    var ct = new CancellationTokenSource((int)timeout.Value.TotalMilliseconds);
+                    ct.Token.Register(() =>
+                    {
+                        ReceiveWorkerStatusResponse(message.RequestId, new WorkerStatusResponse());
+                    }, useSynchronizationContext: false);
+                }
                 if (_workerStatusRequests.TryAdd(message.RequestId, tcs))
                 {
                     SendStreamingMessage(message);
@@ -655,6 +747,7 @@ namespace Microsoft.Azure.WebJobs.Script.Grpc
                 {
                     _startLatencyMetric?.Dispose();
                     _startSubscription?.Dispose();
+                    _monitor?.Dispose();
 
                     // unlink function inputs
                     foreach (var link in _inputLinks)

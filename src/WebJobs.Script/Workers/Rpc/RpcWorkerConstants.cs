@@ -51,5 +51,11 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Rpc
         public const string DotNetExecutableName = "dotnet";
         public const string DotNetExecutableNameWithExtension = DotNetExecutableName + ".exe";
         public const string DotNetFolderName = "dotnet";
+
+        // Concurrancy settings
+        public const string PythonTreadpoolThreadCount = "PYTHON_THREADPOOL_THREAD_COUNT";
+        public const string PSWorkerInProcConcurrencyUpperBound = "PSWorkerInProcConcurrencyUpperBound";
+        public const string DefaultConcurrecny = "100";
+        public const string FunctionWorkerConcurrencyEnabledSettingName = "FUNCTIONS_WORKER_CONCURRENCY_ENABLED";
     }
 }

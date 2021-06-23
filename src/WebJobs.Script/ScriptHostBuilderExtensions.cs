@@ -272,6 +272,7 @@ namespace Microsoft.Azure.WebJobs.Script
                 services.ConfigureOptions<LanguageWorkerOptionsSetup>();
                 services.ConfigureOptions<HttpWorkerOptionsSetup>();
                 services.ConfigureOptions<ManagedDependencyOptionsSetup>();
+                services.ConfigureOptions<RpcWorkerConcurrencyOptionsSetup>();
                 services.AddOptions<FunctionResultAggregatorOptions>()
                     .Configure<IConfiguration>((o, c) =>
                     {
@@ -340,6 +341,7 @@ namespace Microsoft.Azure.WebJobs.Script
             services.TryAddSingleton<IEnvironment>(SystemEnvironment.Instance);
             services.TryAddSingleton<HostPerformanceManager>();
             services.ConfigureOptions<HostHealthMonitorOptionsSetup>();
+
             AddProcessRegistry(services);
         }
 
