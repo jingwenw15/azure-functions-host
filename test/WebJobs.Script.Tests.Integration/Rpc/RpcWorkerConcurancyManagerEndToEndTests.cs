@@ -65,7 +65,14 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
             {
                 // Emulate long worker status latency
                 await Task.Delay(WaitBeforePublish);
-                _scriptEventManager.Publish(scriptEvent);
+                try
+                {
+                    _scriptEventManager.Publish(scriptEvent);
+                } 
+                catch (ObjectDisposedException)
+                {
+                    // Do no throw ObjectDisposedException
+                }
             }
 
             public IDisposable Subscribe(IObserver<ScriptEvent> observer)
