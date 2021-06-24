@@ -20,7 +20,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
         public TestFixture Fixture { get; set; }
 
         [Fact]
-        public async Task WorkerStatus_NewWorkersAdded()
+        public async Task WorkerStatus_NewWorkerAdded()
         {
             RpcFunctionInvocationDispatcher fd = null;
             IEnumerable<IRpcWorkerChannel> channels = null;
@@ -30,19 +30,8 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
             {
                 fd = Fixture.JobHost.FunctionDispatcher as RpcFunctionInvocationDispatcher;
                 channels = await fd.GetInitializedWorkerChannelsAsync();
-                return channels.Count() == 4;
+                return channels.Count() == 2;
             }, pollingInterval: 1000, timeout: 120 * 1000);
-        }
-
-        [Fact]
-        public async Task WorkerStatus_NewWorkersNotAdded()
-        {
-            // Latency < 1s
-            TestScriptEventManager.WaitBeforePublish = TimeSpan.FromMilliseconds(100);
-            await Task.Delay(1000);
-            RpcFunctionInvocationDispatcher fd = Fixture.JobHost.FunctionDispatcher as RpcFunctionInvocationDispatcher;
-            var channels = await fd.GetInitializedWorkerChannelsAsync();
-            Assert.Equal(channels.Count(), 1);
         }
 
         public class TestFixture : ScriptHostEndToEndTestFixture
@@ -52,7 +41,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
                 concurrencyOptions: Options.Create(new RpcWorkerConcurrencyOptions()
                 {
                     Enabled = true,
-                    MaxWorkerCount = 4,
+                    MaxWorkerCount = 2,
                     AdjustmentPeriod = TimeSpan.Zero,
                     CheckInterval = TimeSpan.FromMilliseconds(1000)
                 }))

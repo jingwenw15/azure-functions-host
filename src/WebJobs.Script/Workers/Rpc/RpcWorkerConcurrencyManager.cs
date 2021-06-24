@@ -6,17 +6,20 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.Script.Workers.Rpc
 {
-    internal class RpcWorkerConcurrencyManager : IDisposable
+    internal class RpcWorkerConcurrencyManager : IHostedService, IDisposable
     {
         private readonly TimeSpan _logStateInterval = TimeSpan.FromSeconds(60);
         private readonly IOptions<RpcWorkerConcurrencyOptions> _concurrencyOptions;
         private readonly ILogger _logger;
+        private readonly IFunctionInvocationDispatcherFactory _functionInvocationDispatcherFactory;
 
         private RpcFunctionInvocationDispatcher _dispatcher;
         private System.Timers.Timer _timer;
@@ -25,43 +28,70 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Rpc
         private bool _disposed = false;
         private object syncObj = new object();
 
-        public RpcWorkerConcurrencyManager(IFunctionInvocationDispatcher functionInvocationDispatcher,
+        public RpcWorkerConcurrencyManager(IFunctionInvocationDispatcherFactory functionInvocationDispatcherFactory,
             IOptions<RpcWorkerConcurrencyOptions> concurrencyOptions, ILoggerFactory loggerFactory)
         {
             _concurrencyOptions = concurrencyOptions ?? throw new ArgumentNullException(nameof(concurrencyOptions));
+            _functionInvocationDispatcherFactory = functionInvocationDispatcherFactory ?? throw new ArgumentNullException(nameof(functionInvocationDispatcherFactory));
 
             _logger = loggerFactory?.CreateLogger<RpcWorkerConcurrencyManager>();
-            _dispatcher = functionInvocationDispatcher as RpcFunctionInvocationDispatcher;
         }
 
-        public void Start()
+        public async Task StartAsync(CancellationToken cancellationToken)
         {
-            if (_timer == null && _concurrencyOptions.Value.Enabled)
+            if (_concurrencyOptions.Value.Enabled)
             {
-                lock (syncObj)
-                {
-                    if (_timer == null)
-                    {
-                        _logger.LogDebug($"Language worker concurancy is enabled. Options: {_concurrencyOptions.Value.Format()}");
-                        _timer = new System.Timers.Timer()
-                        {
-                            AutoReset = false,
-                            Interval = _concurrencyOptions.Value.CheckInterval.TotalMilliseconds,
-                        };
+                // Delay monitoring
+                await Task.Delay(_concurrencyOptions.Value.AdjustmentPeriod);
 
-                        _timer.Elapsed += OnTimer;
-                        _timer.Start();
-                    }
-                }
+                _logger.LogDebug($"Staring language worker concurrency monitoring. Options: {_concurrencyOptions.Value.Format()}");
+                _timer = new System.Timers.Timer()
+                {
+                    AutoReset = false,
+                    Interval = _concurrencyOptions.Value.CheckInterval.TotalMilliseconds,
+                };
+
+                _timer.Elapsed += OnTimer;
+                _timer.Start();
+
+                _dispatcher = _functionInvocationDispatcherFactory.GetFunctionDispatcher() as RpcFunctionInvocationDispatcher;
             }
+
+            await Task.CompletedTask;
         }
+
+        public Task StopAsync(CancellationToken cancellationToken)
+        {
+            if (_concurrencyOptions.Value.Enabled && _timer != null)
+            {
+                _logger.LogDebug("Stoping language worker concurrency monitoring.");
+                _timer.Stop();
+            }
+            return Task.CompletedTask;
+        }
+
+        //public void Start()
+        //{
+        //    if (_timer == null && _concurrencyOptions.Value.Enabled)
+        //    {
+        //        lock (syncObj)
+        //        {
+        //            if (_timer == null)
+        //            {
+        //                _logger.LogDebug($"Language worker concurancy is enabled. Options: {_concurrencyOptions.Value.Format()}");
+        //                _timer.Start();
+        //            }
+        //        }
+        //    }
+        //}
 
         internal async void OnTimer(object sender, System.Timers.ElapsedEventArgs e)
         {
-            if (_disposed)
+            if (_disposed && _dispatcher == null)
             {
                 return;
             }
+
             try
             {
                 IEnumerable<IRpcWorkerChannel> workerChannels = await _dispatcher.GetAllWorkerChannelsAsync();

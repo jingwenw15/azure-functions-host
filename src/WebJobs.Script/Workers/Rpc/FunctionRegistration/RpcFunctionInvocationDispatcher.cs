@@ -52,7 +52,6 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Rpc
         private CancellationTokenSource _processStartCancellationToken = new CancellationTokenSource();
         private CancellationTokenSource _disposeToken = new CancellationTokenSource();
         private int _processStartupInterval;
-        private RpcWorkerConcurrencyManager _rpcWorkerConcurancyManager;
         private TimeSpan _processStartupInterval;
         private TimeSpan _restartWait;
         private TimeSpan _shutdownTimeout;
@@ -95,11 +94,6 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Rpc
 
             _shutdownStandbyWorkerChannels = ShutdownWebhostLanguageWorkerChannels;
             _shutdownStandbyWorkerChannels = _shutdownStandbyWorkerChannels.Debounce(milliseconds: 5000);
-
-            if (_concurrencyOptions.Value.Enabled)
-            {
-                _rpcWorkerConcurancyManager = new RpcWorkerConcurrencyManager(this, _concurrencyOptions, _loggerFactory);
-            }
         }
 
         public FunctionInvocationDispatcherState State { get; private set; }
@@ -135,10 +129,6 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Rpc
             State = FunctionInvocationDispatcherState.Initialized;
             // Do not change this log message. Vs Code relies on this to figure out when to attach debuger to the worker process.
             _logger.LogInformation("Worker process started and initialized.");
-            if (_rpcWorkerConcurancyManager != null && _concurrencyOptions.Value.Enabled)
-            {
-                _rpcWorkerConcurancyManager.Start();
-            }
         }
 
         internal async Task InitializeWebhostLanguageWorkerChannel()
@@ -487,7 +477,6 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Rpc
                     _workerRestartSubscription.Dispose();
                     _processStartCancellationToken.Cancel();
                     _processStartCancellationToken.Dispose();
-                    _rpcWorkerConcurancyManager?.Dispose();
                     _jobHostLanguageWorkerChannelManager.ShutdownChannels();
                 }
 

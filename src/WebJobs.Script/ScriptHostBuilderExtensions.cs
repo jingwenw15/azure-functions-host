@@ -250,6 +250,7 @@ namespace Microsoft.Azure.WebJobs.Script
                 services.AddSingleton<IScriptJobHost>(p => p.GetRequiredService<ScriptHost>());
                 services.AddSingleton<IJobHost>(p => p.GetRequiredService<ScriptHost>());
                 services.AddSingleton<IFunctionProvider, ProxyFunctionProvider>();
+                services.AddSingleton<IHostedService, RpcWorkerConcurrencyManager>();
 
                 services.AddSingleton<ITypeLocator, ScriptTypeLocator>();
                 services.AddSingleton<ScriptSettingsManager>();
