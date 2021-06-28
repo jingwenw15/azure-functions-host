@@ -173,7 +173,7 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Rpc
         {
             if (status.RpcWorkerStats.LatencyHistory.Count() >= _concurrencyOptions.Value.HistorySize)
             {
-                int overloadedCount = status.RpcWorkerStats.LatencyHistory.Where(x => x.TotalMilliseconds > _concurrencyOptions.Value.LatencyThreshold.TotalMilliseconds).Count();
+                int overloadedCount = status.RpcWorkerStats.LatencyHistory.Where(x => x.TotalMilliseconds >= _concurrencyOptions.Value.LatencyThreshold.TotalMilliseconds).Count();
                 double proportion = (double)overloadedCount / _concurrencyOptions.Value.HistorySize;
 
                 return proportion >= _concurrencyOptions.Value.HistoryThreshold;

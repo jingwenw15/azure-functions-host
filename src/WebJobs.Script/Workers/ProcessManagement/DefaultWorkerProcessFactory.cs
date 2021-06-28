@@ -105,11 +105,11 @@ namespace Microsoft.Azure.WebJobs.Script.Workers
                 string functionWorkerRuntime = startInfo.EnvironmentVariables[RpcWorkerConstants.FunctionWorkerRuntimeSettingName];
                 if (functionWorkerRuntime == RpcWorkerConstants.PythonLanguageWorkerName)
                 {
-                    startInfo.EnvironmentVariables[RpcWorkerConstants.PythonTreadpoolThreadCount] = RpcWorkerConstants.DefaultConcurrecny;
+                    startInfo.EnvironmentVariables[RpcWorkerConstants.PythonTreadpoolThreadCount] = RpcWorkerConstants.DefaultConcurrecnyPython;
                 }
                 if (functionWorkerRuntime == RpcWorkerConstants.PowerShellLanguageWorkerName)
                 {
-                    startInfo.EnvironmentVariables[RpcWorkerConstants.PSWorkerInProcConcurrencyUpperBound] = RpcWorkerConstants.DefaultConcurrecny;
+                    startInfo.EnvironmentVariables[RpcWorkerConstants.PSWorkerInProcConcurrencyUpperBound] = RpcWorkerConstants.DefaultConcurrencyPS;
                 }
             }
         }

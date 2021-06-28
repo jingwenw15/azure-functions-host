@@ -207,20 +207,25 @@ namespace Microsoft.Azure.WebJobs.Script.Grpc
 
                 var sw = Stopwatch.StartNew();
                 var tcs = new TaskCompletionSource<bool>();
-                if (timeout != null)
-                {
-                    var ct = new CancellationTokenSource((int)timeout.Value.TotalMilliseconds);
-                    ct.Token.Register(() =>
-                    {
-                        ReceiveWorkerStatusResponse(message.RequestId, new WorkerStatusResponse());
-                    }, useSynchronizationContext: false);
-                }
                 if (_workerStatusRequests.TryAdd(message.RequestId, tcs))
                 {
                     SendStreamingMessage(message);
-                    await tcs.Task;
+                    if (timeout != null)
+                    {
+                        if (!(await Task.WhenAny(tcs.Task, Task.Delay(timeout.Value)) == tcs.Task))
+                        {
+                            result = timeout.Value;
+                        }
+                    }
+                    else
+                    {
+                        await tcs.Task;
+                    }
                     sw.Stop();
-                    result = sw.Elapsed;
+                    if (result == null)
+                    {
+                        result = sw.Elapsed;
+                    }
                 }
             }
 
