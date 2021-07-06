@@ -21,7 +21,7 @@ namespace Microsoft.Azure.WebJobs.Script.Config
 
         public void Configure(RpcWorkerConcurrencyOptions options)
         {
-            if (bool.TryParse(_environment.GetEnvironmentVariable(RpcWorkerConstants.FunctionWorkerConcurrencyEnabledSettingName), out bool enabled))
+            if (bool.TryParse(_environment.GetEnvironmentVariable(RpcWorkerConstants.FunctionWorkerDynamicConcurrencyEnabledSettingName), out bool enabled))
             {
                 // Do not enable convurrency if any concurrency settings are defined
                 if (enabled && string.IsNullOrEmpty(_environment.GetEnvironmentVariable(RpcWorkerConstants.FunctionsWorkerProcessCountSettingName)))
@@ -42,8 +42,7 @@ namespace Microsoft.Azure.WebJobs.Script.Config
 
                     if (options.MaxWorkerCount == 0)
                     {
-                        int effectiveCores = (_environment.IsConsumptionSku() && !_environment.IsVMSS()) ? 1 : Environment.ProcessorCount;
-                        options.MaxWorkerCount = (effectiveCores * 2) + 2;
+                        options.MaxWorkerCount = (_environment.GetEffectiveCoresCount() * 2) + 2;
                     }
                 }
             }

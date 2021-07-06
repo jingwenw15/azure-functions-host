@@ -23,10 +23,9 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Rpc
 
         private RpcFunctionInvocationDispatcher _dispatcher;
         private System.Timers.Timer _timer;
-        private Stopwatch _addWorkeStopWatch = Stopwatch.StartNew();
+        private Stopwatch _addWorkerStopWatch = Stopwatch.StartNew();
         private Stopwatch _logStateStopWatch = Stopwatch.StartNew();
         private bool _disposed = false;
-        private object syncObj = new object();
 
         public RpcWorkerConcurrencyManager(IFunctionInvocationDispatcherFactory functionInvocationDispatcherFactory,
             IOptions<RpcWorkerConcurrencyOptions> concurrencyOptions, ILoggerFactory loggerFactory)
@@ -44,7 +43,7 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Rpc
                 // Delay monitoring
                 await Task.Delay(_concurrencyOptions.Value.AdjustmentPeriod);
 
-                _logger.LogDebug($"Staring language worker concurrency monitoring. Options: {_concurrencyOptions.Value.Format()}");
+                _logger.LogDebug($"Starting language worker concurrency monitoring. Options: {_concurrencyOptions.Value.Format()}");
                 _timer = new System.Timers.Timer()
                 {
                     AutoReset = false,
@@ -55,6 +54,10 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Rpc
                 _timer.Start();
 
                 _dispatcher = _functionInvocationDispatcherFactory.GetFunctionDispatcher() as RpcFunctionInvocationDispatcher;
+            }
+            else
+            {
+                _logger.LogDebug($"Language worker concurrency is disabled.");
             }
 
             await Task.CompletedTask;
@@ -70,21 +73,6 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Rpc
             return Task.CompletedTask;
         }
 
-        //public void Start()
-        //{
-        //    if (_timer == null && _concurrencyOptions.Value.Enabled)
-        //    {
-        //        lock (syncObj)
-        //        {
-        //            if (_timer == null)
-        //            {
-        //                _logger.LogDebug($"Language worker concurancy is enabled. Options: {_concurrencyOptions.Value.Format()}");
-        //                _timer.Start();
-        //            }
-        //        }
-        //    }
-        //}
-
         internal async void OnTimer(object sender, System.Timers.ElapsedEventArgs e)
         {
             if (_disposed && _dispatcher == null)
@@ -96,11 +84,11 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Rpc
             {
                 IEnumerable<IRpcWorkerChannel> workerChannels = await _dispatcher.GetAllWorkerChannelsAsync();
 
-                if (AddWorkerIfNeeded(workerChannels, _addWorkeStopWatch.Elapsed))
+                if (AddWorkerIfNeeded(workerChannels, _addWorkerStopWatch.Elapsed))
                 {
-                    await _dispatcher.RestartWorkerChannel(null);
+                    await _dispatcher.StartWorkerChannel(null);
                     _logger.LogDebug("New worker is added.");
-                    _addWorkeStopWatch.Restart();
+                    _addWorkerStopWatch.Restart();
                 }
             }
             catch (Exception ex)

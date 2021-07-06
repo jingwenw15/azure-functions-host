@@ -55,8 +55,8 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Rpc
         // Concurrancy settings
         public const string PythonTreadpoolThreadCount = "PYTHON_THREADPOOL_THREAD_COUNT";
         public const string PSWorkerInProcConcurrencyUpperBound = "PSWorkerInProcConcurrencyUpperBound";
-        public const string DefaultConcurrecnyPython = "32";
+        public const string DefaultConcurrencyPython = "32";
         public const string DefaultConcurrencyPS = "100";
-        public const string FunctionWorkerConcurrencyEnabledSettingName = "FUNCTIONS_WORKER_CONCURRENCY_ENABLED";
+        public const string FunctionWorkerDynamicConcurrencyEnabledSettingName = "FUNCTIONS_WORKER_DYNAMIC_CONCURRENCY_ENABLED";
     }
 }

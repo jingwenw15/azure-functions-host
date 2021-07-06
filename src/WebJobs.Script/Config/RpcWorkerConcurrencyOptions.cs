@@ -20,7 +20,7 @@ namespace Microsoft.Azure.WebJobs.Script
         }
 
         /// <summary>
-        /// Gets or sets a value indicating whether language worker concurrancy
+        /// Gets or sets a value indicating whether language worker concurrency
         /// is enabled.
         /// </summary>
         public bool Enabled { get; set; }

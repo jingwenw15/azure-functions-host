@@ -52,7 +52,7 @@ namespace Microsoft.Azure.WebJobs.Script.Workers
                 Arguments = GetArguments(context),
             };
 
-            RemoveConcurrencyLimits(startInfo);
+            ApplyWorkerConcurrencyLimits(startInfo);
 
             var processEnvVariables = context.EnvironmentVariables;
             if (processEnvVariables != null && processEnvVariables.Any())
@@ -97,7 +97,7 @@ namespace Microsoft.Azure.WebJobs.Script.Workers
             return envExpandedString;
         }
 
-        internal void RemoveConcurrencyLimits(ProcessStartInfo startInfo)
+        internal void ApplyWorkerConcurrencyLimits(ProcessStartInfo startInfo)
         {
             if (_concurrencyOptions.Value.Enabled)
             {
@@ -105,7 +105,7 @@ namespace Microsoft.Azure.WebJobs.Script.Workers
                 string functionWorkerRuntime = startInfo.EnvironmentVariables[RpcWorkerConstants.FunctionWorkerRuntimeSettingName];
                 if (functionWorkerRuntime == RpcWorkerConstants.PythonLanguageWorkerName)
                 {
-                    startInfo.EnvironmentVariables[RpcWorkerConstants.PythonTreadpoolThreadCount] = RpcWorkerConstants.DefaultConcurrecnyPython;
+                    startInfo.EnvironmentVariables[RpcWorkerConstants.PythonTreadpoolThreadCount] = RpcWorkerConstants.DefaultConcurrencyPython;
                 }
                 if (functionWorkerRuntime == RpcWorkerConstants.PowerShellLanguageWorkerName)
                 {

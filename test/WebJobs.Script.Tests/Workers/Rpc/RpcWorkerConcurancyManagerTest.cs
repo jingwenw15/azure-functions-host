@@ -80,7 +80,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers.Rpc
                     Options.Create(new RpcWorkerConcurrencyOptions()
                     {
                         Enabled = true,
-                        LatencyThreshold = TimeSpan.FromMilliseconds(14),
+                        LatencyThreshold = TimeSpan.FromMilliseconds(15),
                         HistorySize = 6,
                         HistoryThreshold = 0.5F
                     }),
@@ -226,7 +226,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers.Rpc
 
             await TestHelpers.Await(() =>
             {
-                var sratedLog = _loggerProvider.GetAllLogMessages().FirstOrDefault(x => x.FormattedMessage.StartsWith("Staring language worker concurrency monitoring."));
+                var sratedLog = _loggerProvider.GetAllLogMessages().FirstOrDefault(x => x.FormattedMessage.StartsWith("Starting language worker concurrency monitoring."));
                 return sratedLog != null;
             }, pollingInterval: 1000, timeout: 10 * 1000);
         }
@@ -266,6 +266,10 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers.Rpc
                     LatencyHistory = latencies.Select(x => TimeSpan.FromMilliseconds(x))
                 }
             };
+
+            if (concurrancyManger.IsOverloaded(status) != expected)
+            {
+            }
 
             Assert.Equal(concurrancyManger.IsOverloaded(status), expected);
         }

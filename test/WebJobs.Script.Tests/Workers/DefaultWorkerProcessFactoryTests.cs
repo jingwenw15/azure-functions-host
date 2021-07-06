@@ -114,7 +114,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers
         }
 
         [Theory]
-        [InlineData(RpcWorkerConstants.PythonTreadpoolThreadCount, RpcWorkerConstants.PythonLanguageWorkerName, RpcWorkerConstants.DefaultConcurrecnyPython)]
+        [InlineData(RpcWorkerConstants.PythonTreadpoolThreadCount, RpcWorkerConstants.PythonLanguageWorkerName, RpcWorkerConstants.DefaultConcurrencyPython)]
         [InlineData(RpcWorkerConstants.PSWorkerInProcConcurrencyUpperBound, RpcWorkerConstants.PowerShellLanguageWorkerName, RpcWorkerConstants.DefaultConcurrencyPS)]
         public void DefaultWorkerProcessFactory_LanguageWorkerConcurrency_Overwrite(string appSettingName, string funcrionWorkerRuntime, string defaultConcurrecny)
         {

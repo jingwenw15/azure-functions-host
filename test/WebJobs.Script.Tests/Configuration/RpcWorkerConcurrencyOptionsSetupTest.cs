@@ -27,7 +27,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Configuration
         {
             IConfiguration config = new ConfigurationBuilder().Build();
             TestEnvironment environment = new TestEnvironment();
-            environment.SetEnvironmentVariable(RpcWorkerConstants.FunctionWorkerConcurrencyEnabledSettingName, functionWorkerConcurrencyEnabled);
+            environment.SetEnvironmentVariable(RpcWorkerConstants.FunctionWorkerDynamicConcurrencyEnabledSettingName, functionWorkerConcurrencyEnabled);
             environment.SetEnvironmentVariable(RpcWorkerConstants.FunctionsWorkerProcessCountSettingName, functionsWorkerProcessCount);
             environment.SetEnvironmentVariable(RpcWorkerConstants.FunctionWorkerRuntimeSettingName, functionWorkerRuntime);
             environment.SetEnvironmentVariable(RpcWorkerConstants.PythonTreadpoolThreadCount, pythonTreadpoolThreadCount);
@@ -59,7 +59,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Configuration
             .Build();
 
             TestEnvironment environment = new TestEnvironment();
-            environment.SetEnvironmentVariable(RpcWorkerConstants.FunctionWorkerConcurrencyEnabledSettingName, "true");
+            environment.SetEnvironmentVariable(RpcWorkerConstants.FunctionWorkerDynamicConcurrencyEnabledSettingName, "true");
 
             RpcWorkerConcurrencyOptionsSetup setup = new RpcWorkerConcurrencyOptionsSetup(config, environment);
             RpcWorkerConcurrencyOptions options = new RpcWorkerConcurrencyOptions();
