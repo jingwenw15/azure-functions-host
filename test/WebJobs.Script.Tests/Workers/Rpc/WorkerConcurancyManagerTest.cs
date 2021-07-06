@@ -14,14 +14,14 @@ using Microsoft.WebJobs.Script.Tests;
 using Moq;
 using Xunit;
 
-namespace Microsoft.Azure.WebJobs.Script.Tests.Workers.Rpc
+namespace Microsoft.Azure.WebJobs.Script.Tests.Workers
 {
-    public class RpcWorkerConcurancyManagerTest
+    public class WorkerConcurancyManagerTest
     {
         private TestLoggerProvider _loggerProvider;
         private ILoggerFactory _loggerFactory;
 
-        public RpcWorkerConcurancyManagerTest()
+        public WorkerConcurancyManagerTest()
         {
             _loggerProvider = new TestLoggerProvider();
             _loggerFactory = new LoggerFactory();
@@ -33,7 +33,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers.Rpc
             {
                 new object[]
                 {
-                    Options.Create(new RpcWorkerConcurrencyOptions()
+                    Options.Create(new WorkerConcurrencyOptions()
                     {
                         Enabled = true,
                         HistorySize = 5
@@ -43,7 +43,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers.Rpc
                 },
                 new object[]
                 {
-                    Options.Create(new RpcWorkerConcurrencyOptions()
+                    Options.Create(new WorkerConcurrencyOptions()
                     {
                         Enabled = true,
                         LatencyThreshold = TimeSpan.FromMilliseconds(10),
@@ -54,7 +54,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers.Rpc
                 },
                 new object[]
                 {
-                    Options.Create(new RpcWorkerConcurrencyOptions()
+                    Options.Create(new WorkerConcurrencyOptions()
                     {
                         Enabled = true,
                         LatencyThreshold = TimeSpan.FromMilliseconds(10),
@@ -65,7 +65,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers.Rpc
                 },
                 new object[]
                 {
-                    Options.Create(new RpcWorkerConcurrencyOptions()
+                    Options.Create(new WorkerConcurrencyOptions()
                     {
                         Enabled = true,
                         LatencyThreshold = TimeSpan.FromMilliseconds(13),
@@ -77,7 +77,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers.Rpc
                 },
                 new object[]
                 {
-                    Options.Create(new RpcWorkerConcurrencyOptions()
+                    Options.Create(new WorkerConcurrencyOptions()
                     {
                         Enabled = true,
                         LatencyThreshold = TimeSpan.FromMilliseconds(15),
@@ -89,7 +89,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers.Rpc
                 },
                 new object[]
                 {
-                    Options.Create(new RpcWorkerConcurrencyOptions()
+                    Options.Create(new WorkerConcurrencyOptions()
                     {
                         Enabled = true,
                         LatencyThreshold = TimeSpan.FromMilliseconds(14),
@@ -100,15 +100,12 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers.Rpc
                 }
             };
 
-        //public void AddWorkerIfNeeded_Returns_Expected(IOptions<RpcWorkerConcurrencyOptions> options,
-        //    int[] latencies1, int[] latencies2, bool readyForInvocations1, bool readyForInvocations2,
-        //    TimeSpan elapsedFromLastAdding, bool expected)
         public static IEnumerable<object[]> DataForForAddWorkerIfNeeded =>
             new List<object[]>
             {
                 new object[]
                 {
-                    Options.Create(new RpcWorkerConcurrencyOptions()
+                    Options.Create(new WorkerConcurrencyOptions()
                     {
                         Enabled = true,
                         HistorySize = 5,
@@ -125,7 +122,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers.Rpc
                 },
                 new object[]
                 {
-                    Options.Create(new RpcWorkerConcurrencyOptions()
+                    Options.Create(new WorkerConcurrencyOptions()
                     {
                         Enabled = true,
                         HistorySize = 5,
@@ -142,7 +139,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers.Rpc
                 },
                 new object[]
                 {
-                    Options.Create(new RpcWorkerConcurrencyOptions()
+                    Options.Create(new WorkerConcurrencyOptions()
                     {
                         Enabled = true,
                         HistorySize = 5,
@@ -159,7 +156,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers.Rpc
                 },
                 new object[]
                 {
-                    Options.Create(new RpcWorkerConcurrencyOptions()
+                    Options.Create(new WorkerConcurrencyOptions()
                     {
                         Enabled = true,
                         HistorySize = 5,
@@ -176,7 +173,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers.Rpc
                 },
                 new object[]
                 {
-                    Options.Create(new RpcWorkerConcurrencyOptions()
+                    Options.Create(new WorkerConcurrencyOptions()
                     {
                         Enabled = true,
                         HistorySize = 5,
@@ -193,7 +190,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers.Rpc
                 },
                 new object[]
                 {
-                    Options.Create(new RpcWorkerConcurrencyOptions()
+                    Options.Create(new WorkerConcurrencyOptions()
                     {
                         Enabled = true,
                         HistorySize = 5,
@@ -213,7 +210,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers.Rpc
         [Fact]
         public async Task Start_StartsTimer()
         {
-            IOptions<RpcWorkerConcurrencyOptions> options = Options.Create(new RpcWorkerConcurrencyOptions()
+            IOptions<WorkerConcurrencyOptions> options = Options.Create(new WorkerConcurrencyOptions()
             {
                 Enabled = true,
                 AdjustmentPeriod = TimeSpan.Zero
@@ -221,12 +218,12 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers.Rpc
             Mock<IFunctionInvocationDispatcher> functionInvocationDispatcher = new Mock<IFunctionInvocationDispatcher>(MockBehavior.Strict);
             Mock<IFunctionInvocationDispatcherFactory> functionInvocationDispatcherFactory = new Mock<IFunctionInvocationDispatcherFactory>(MockBehavior.Strict);
             functionInvocationDispatcherFactory.Setup(x => x.GetFunctionDispatcher()).Returns(functionInvocationDispatcher.Object);
-            RpcWorkerConcurrencyManager concurrancyManger = new RpcWorkerConcurrencyManager(functionInvocationDispatcherFactory.Object, options, _loggerFactory);
+            WorkerConcurrencyManager concurrancyManger = new WorkerConcurrencyManager(functionInvocationDispatcherFactory.Object, options, _loggerFactory);
             await concurrancyManger.StartAsync(CancellationToken.None);
 
             await TestHelpers.Await(() =>
             {
-                var sratedLog = _loggerProvider.GetAllLogMessages().FirstOrDefault(x => x.FormattedMessage.StartsWith("Starting language worker concurrency monitoring."));
+                var sratedLog = _loggerProvider.GetAllLogMessages().FirstOrDefault(x => x.FormattedMessage.StartsWith("Starting worker concurrency monitoring."));
                 return sratedLog != null;
             }, pollingInterval: 1000, timeout: 10 * 1000);
         }
@@ -234,34 +231,51 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers.Rpc
         [Fact]
         public async Task Start_DoesNot_StartTimer()
         {
-            IOptions<RpcWorkerConcurrencyOptions> options = Options.Create(new RpcWorkerConcurrencyOptions()
+            IOptions<WorkerConcurrencyOptions> options = Options.Create(new WorkerConcurrencyOptions()
             {
                 Enabled = false
             });
             Mock<IFunctionInvocationDispatcher> functionInvocationDispatcher = new Mock<IFunctionInvocationDispatcher>(MockBehavior.Strict);
             Mock<IFunctionInvocationDispatcherFactory> functionInvocationDispatcherFactory = new Mock<IFunctionInvocationDispatcherFactory>(MockBehavior.Strict);
             functionInvocationDispatcherFactory.Setup(x => x.GetFunctionDispatcher()).Returns(functionInvocationDispatcher.Object);
-            RpcWorkerConcurrencyManager concurrancyManger = new RpcWorkerConcurrencyManager(functionInvocationDispatcherFactory.Object, options, _loggerFactory);
+            WorkerConcurrencyManager concurrancyManger = new WorkerConcurrencyManager(functionInvocationDispatcherFactory.Object, options, _loggerFactory);
             await concurrancyManger.StartAsync(CancellationToken.None);
 
             await Task.Delay(1000);
-            var sratedLog = _loggerProvider.GetAllLogMessages().FirstOrDefault(x => x.FormattedMessage.StartsWith("Language worker concurancy is enabled."));
+            var sratedLog = _loggerProvider.GetAllLogMessages().FirstOrDefault(x => x.FormattedMessage.StartsWith("Starting worker concurrency monitoring."));
+            Assert.True(sratedLog == null);
+        }
+
+        [Fact]
+        public async Task Start_HttpWorker_DoesNot_StartTimer()
+        {
+            IOptions<WorkerConcurrencyOptions> options = Options.Create(new WorkerConcurrencyOptions()
+            {
+                Enabled = false
+            });
+            Mock<IFunctionInvocationDispatcherFactory> functionInvocationDispatcherFactory = new Mock<IFunctionInvocationDispatcherFactory>(MockBehavior.Strict);
+            functionInvocationDispatcherFactory.Setup(x => x.GetFunctionDispatcher()).Returns(new HttpFunctionInvocationDispatcher());
+            WorkerConcurrencyManager concurrancyManger = new WorkerConcurrencyManager(functionInvocationDispatcherFactory.Object, options, _loggerFactory);
+            await concurrancyManger.StartAsync(CancellationToken.None);
+
+            await Task.Delay(1000);
+            var sratedLog = _loggerProvider.GetAllLogMessages().FirstOrDefault(x => x.FormattedMessage.StartsWith("Http worker concurrency is not supported."));
             Assert.True(sratedLog == null);
         }
 
         [Theory]
         [MemberData(nameof(DataForIsOverloaded))]
-        public async Task IsOverloaded_Returns_Expected(IOptions<RpcWorkerConcurrencyOptions> options, int[] latencies, bool expected)
+        public async Task IsOverloaded_Returns_Expected(IOptions<WorkerConcurrencyOptions> options, int[] latencies, bool expected)
         {
             Mock<IFunctionInvocationDispatcher> functionInvocationDispatcher = new Mock<IFunctionInvocationDispatcher>(MockBehavior.Strict);
             Mock<IFunctionInvocationDispatcherFactory> functionInvocationDispatcherFactory = new Mock<IFunctionInvocationDispatcherFactory>(MockBehavior.Strict);
             functionInvocationDispatcherFactory.Setup(x => x.GetFunctionDispatcher()).Returns(functionInvocationDispatcher.Object);
-            RpcWorkerConcurrencyManager concurrancyManger = new RpcWorkerConcurrencyManager(functionInvocationDispatcherFactory.Object, options, _loggerFactory);
+            WorkerConcurrencyManager concurrancyManger = new WorkerConcurrencyManager(functionInvocationDispatcherFactory.Object, options, _loggerFactory);
             await concurrancyManger.StartAsync(CancellationToken.None);
 
             WorkerStatus status = new WorkerStatus()
             {
-                RpcWorkerStats = new RpcWorkerStats()
+                RpcWorkerStats = new WorkerStats()
                 {
                     LatencyHistory = latencies.Select(x => TimeSpan.FromMilliseconds(x))
                 }
@@ -276,7 +290,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers.Rpc
 
         [Theory]
         [MemberData(nameof(DataForForAddWorkerIfNeeded))]
-        public void AddWorkerIfNeeded_Returns_Expected(IOptions<RpcWorkerConcurrencyOptions> options,
+        public void AddWorkerIfNeeded_Returns_Expected(IOptions<WorkerConcurrencyOptions> options,
             int[] latencies1, int[] latencies2, bool readyForInvocations1, bool readyForInvocations2,
             TimeSpan elapsedFromLastAdding, bool expected)
         {
@@ -284,39 +298,28 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers.Rpc
             Mock<IFunctionInvocationDispatcherFactory> functionInvocationDispatcherFactory = new Mock<IFunctionInvocationDispatcherFactory>(MockBehavior.Strict);
             functionInvocationDispatcherFactory.Setup(x => x.GetFunctionDispatcher()).Returns(functionInvocationDispatcher.Object);
 
-            List<IRpcWorkerChannel> list = new List<IRpcWorkerChannel>();
+            Dictionary<string, WorkerStatus> workerStatuses = new Dictionary<string, WorkerStatus>();
 
-            Mock<IRpcWorkerChannel> channelMock1 = new Mock<IRpcWorkerChannel>(MockBehavior.Strict);
-            Mock<IRpcWorkerConcurrencyChannel> concurrencyChannelMock1 = channelMock1.As<IRpcWorkerConcurrencyChannel>();
-            channelMock1.Setup(x => x.IsChannelReadyForInvocations()).Returns(readyForInvocations1);
-            channelMock1.Setup(x => x.Id).Returns("test2");
-            channelMock1.Setup(x => x.FunctionInputBuffers).Returns(() => { return null; });
-            concurrencyChannelMock1.Setup(x => x.GetWorkerStatus()).Returns(new WorkerStatus()
+            workerStatuses.Add("test1", new WorkerStatus()
             {
-                RpcWorkerStats = new RpcWorkerStats()
+                IsReady = readyForInvocations1,
+                RpcWorkerStats = new WorkerStats()
                 {
                     LatencyHistory = latencies1.Select(x => TimeSpan.FromMilliseconds(x))
                 }
             });
-            list.Add(channelMock1.Object);
-
-            Mock<IRpcWorkerChannel> channelMock2 = new Mock<IRpcWorkerChannel>();
-            Mock<IRpcWorkerConcurrencyChannel> concurrencyChannelMock2 = channelMock2.As<IRpcWorkerConcurrencyChannel>();
-            channelMock2.Setup(x => x.IsChannelReadyForInvocations()).Returns(readyForInvocations2);
-            channelMock2.Setup(x => x.Id).Returns("test1");
-            channelMock2.Setup(x => x.FunctionInputBuffers).Returns(() => { return null; });
-            concurrencyChannelMock2.Setup(x => x.GetWorkerStatus()).Returns(new WorkerStatus()
+            workerStatuses.Add("test2", new WorkerStatus()
             {
-                RpcWorkerStats = new RpcWorkerStats()
+                IsReady = readyForInvocations2,
+                RpcWorkerStats = new WorkerStats()
                 {
                     LatencyHistory = latencies2.Select(x => TimeSpan.FromMilliseconds(x))
                 }
             });
-            list.Add(channelMock2.Object);
 
-            RpcWorkerConcurrencyManager concurrancyManager = new RpcWorkerConcurrencyManager(functionInvocationDispatcherFactory.Object, options, _loggerFactory);
+            WorkerConcurrencyManager concurrancyManager = new WorkerConcurrencyManager(functionInvocationDispatcherFactory.Object, options, _loggerFactory);
 
-            bool value = concurrancyManager.AddWorkerIfNeeded(list, elapsedFromLastAdding);
+            bool value = concurrancyManager.AddWorkerIfNeeded(workerStatuses, elapsedFromLastAdding);
 
             Assert.Equal(value, expected);
         }

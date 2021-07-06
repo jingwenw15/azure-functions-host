@@ -47,7 +47,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers.Rpc
         private readonly IOptionsMonitor<ScriptApplicationHostOptions> _hostOptionsMonitor;
         private readonly IMemoryMappedFileAccessor _mapAccessor;
         private readonly ISharedMemoryManager _sharedMemoryManager;
-        private readonly IOptions<RpcWorkerConcurrencyOptions> _concurrencyOptions;
+        private readonly IOptions<WorkerConcurrencyOptions> _concurrencyOptions;
         private GrpcWorkerChannel _workerChannel;
 
         public GrpcWorkerChannelTests()
@@ -81,7 +81,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers.Rpc
                 HasParentScope = true
             };
             _hostOptionsMonitor = TestHelpers.CreateOptionsMonitor(hostOptions);
-            _concurrencyOptions = Options.Create(new RpcWorkerConcurrencyOptions());
+            _concurrencyOptions = Options.Create(new WorkerConcurrencyOptions());
 
             _workerChannel = new GrpcWorkerChannel(
                _workerId,

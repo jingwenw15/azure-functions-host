@@ -41,10 +41,10 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
         private readonly bool _startHost;
         private readonly ICollection<string> _functions;
         private readonly string _functionsWorkerLanguage;
-        private readonly IOptions<RpcWorkerConcurrencyOptions> _concurrencyOptions;
+        private readonly IOptions<WorkerConcurrencyOptions> _concurrencyOptions;
 
         protected ScriptHostEndToEndTestFixture(string rootPath, string testId, string functionsWorkerLanguage, ProxyClientExecutor proxyClient = null,
-            bool startHost = true, ICollection<string> functions = null, IOptions<RpcWorkerConcurrencyOptions> concurrencyOptions = null)
+            bool startHost = true, ICollection<string> functions = null, IOptions<WorkerConcurrencyOptions> concurrencyOptions = null)
         {
             _settingsManager = ScriptSettingsManager.Instance;
             FixtureId = testId;
@@ -146,7 +146,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
 
                    if (_concurrencyOptions != null)
                    {
-                       services.AddSingleton<IOptions<RpcWorkerConcurrencyOptions>>(_concurrencyOptions);
+                       services.AddSingleton<IOptions<WorkerConcurrencyOptions>>(_concurrencyOptions);
                    }
 
                    if (_proxyClient != null)
@@ -166,7 +166,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
                    services.AddSingleton<ISharedMemoryManager, SharedMemoryManager>();
                    if (_concurrencyOptions != null)
                    {
-                       services.AddSingleton<IScriptEventManager, RpcWorkerConcurancyManagerEndToEndTests.TestScriptEventManager>();
+                       services.AddSingleton<IScriptEventManager, WorkerConcurancyManagerEndToEndTests.TestScriptEventManager>();
                    }
 
                    ConfigureServices(services);

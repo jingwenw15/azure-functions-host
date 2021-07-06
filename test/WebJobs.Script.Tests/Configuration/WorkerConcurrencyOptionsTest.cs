@@ -9,12 +9,12 @@ using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Script.Tests.Configuration
 {
-    public class RpcWorkerConcurrencyOptionsTest
+    public class WorkerConcurrencyOptionsTest
     {
         [Fact]
         public void Constructor_Defaults()
         {
-            var options = new RpcWorkerConcurrencyOptions();
+            var options = new WorkerConcurrencyOptions();
 
             Assert.Equal(false, options.Enabled);
             Assert.Equal(TimeSpan.FromSeconds(10), options.AdjustmentPeriod);
@@ -28,7 +28,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Configuration
         [Fact]
         public void Format_ReturnsExpectedResult()
         {
-            var options = new RpcWorkerConcurrencyOptions
+            var options = new WorkerConcurrencyOptions
             {
                 Enabled = true,
                 LatencyThreshold = TimeSpan.FromSeconds(20),

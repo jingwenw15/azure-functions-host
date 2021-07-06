@@ -31,7 +31,7 @@ namespace Microsoft.Azure.WebJobs.Script.Workers
             IJobHostRpcWorkerChannelManager jobHostLanguageWorkerChannelManager,
             IOptions<ManagedDependencyOptions> managedDependencyOptions,
             IRpcFunctionInvocationDispatcherLoadBalancer functionDispatcherLoadBalancer,
-            IOptions<RpcWorkerConcurrencyOptions> concurrencyOptions)
+            IOptions<WorkerConcurrencyOptions> concurrencyOptions)
         {
             if (httpWorkerOptions.Value == null)
             {

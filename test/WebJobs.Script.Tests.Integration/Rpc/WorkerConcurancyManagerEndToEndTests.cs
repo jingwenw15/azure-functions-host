@@ -10,9 +10,9 @@ using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Script.Tests
 {
-    public class RpcWorkerConcurancyManagerEndToEndTests : IClassFixture<RpcWorkerConcurancyManagerEndToEndTests.TestFixture>
+    public class WorkerConcurancyManagerEndToEndTests : IClassFixture<WorkerConcurancyManagerEndToEndTests.TestFixture>
     {
-        public RpcWorkerConcurancyManagerEndToEndTests(TestFixture fixture)
+        public WorkerConcurancyManagerEndToEndTests(TestFixture fixture)
         {
             Fixture = fixture;
         }
@@ -38,7 +38,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
         {
             public TestFixture() : base(@"TestScripts\Node", "node", RpcWorkerConstants.NodeLanguageWorkerName,
                 startHost: true, functions: new[] { "HttpTrigger" },
-                concurrencyOptions: Options.Create(new RpcWorkerConcurrencyOptions()
+                concurrencyOptions: Options.Create(new WorkerConcurrencyOptions()
                 {
                     Enabled = true,
                     MaxWorkerCount = 2,

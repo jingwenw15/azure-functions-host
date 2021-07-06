@@ -7,9 +7,9 @@ using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Azure.WebJobs.Script
 {
-    public class RpcWorkerConcurrencyOptions : Hosting.IOptionsFormatter
+    public class WorkerConcurrencyOptions : Hosting.IOptionsFormatter
     {
-        public RpcWorkerConcurrencyOptions()
+        public WorkerConcurrencyOptions()
         {
             // Setting deafault values
             LatencyThreshold = TimeSpan.FromSeconds(1);
@@ -20,41 +20,41 @@ namespace Microsoft.Azure.WebJobs.Script
         }
 
         /// <summary>
-        /// Gets or sets a value indicating whether language worker concurrency
+        /// Gets or sets a value indicating whether worker concurrency
         /// is enabled.
         /// </summary>
         public bool Enabled { get; set; }
 
         /// <summary>
-        /// Gets or sets the latency threshold dictating when language worker channel is overloaded.
+        /// Gets or sets the latency threshold dictating when worker channel is overloaded.
         /// </summary>
         public TimeSpan LatencyThreshold { get; set; }
 
         /// <summary>
-        /// Gets or sets the time when language worker
+        /// Gets or sets the time when worker
         /// channels will start to monitor again after adding a new worker.
         /// </summary>
         public TimeSpan AdjustmentPeriod { get; set; }
 
         /// <summary>
-        /// Gets or sets interval to check language worker channel state.
+        /// Gets or sets interval to check worker channel state.
         /// </summary>
         public TimeSpan CheckInterval { get; set; }
 
         /// <summary>
-        /// Gets or sets the history size to store language workers channel states.
+        /// Gets or sets the history size to store workers channel states.
         /// </summary>
         public int HistorySize { get; set; }
 
         /// <summary>
         /// Gets or sets the history threshold.
         /// E. g. value equal to 1.0 means all states in history should be
-        /// overloaded to consider language worker state as overloaded.
+        /// overloaded to consider worker state as overloaded.
         /// </summary>
         public float HistoryThreshold { get; set; }
 
         /// <summary>
-        /// Gets or sets the max count of language workers.
+        /// Gets or sets the max count of workers.
         /// It will be set depending on SKU if equal to 0.
         /// </summary>
         public int MaxWorkerCount { get; set; }

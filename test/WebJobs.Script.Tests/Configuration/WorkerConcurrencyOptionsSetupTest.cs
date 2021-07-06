@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Script.Tests.Configuration
 {
-    public class RpcWorkerConcurrencyOptionsSetupTest
+    public class WorkerConcurrencyOptionsSetupTest
     {
         [Theory]
         [InlineData("true", "", "node", "", "", true)]
@@ -33,8 +33,8 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Configuration
             environment.SetEnvironmentVariable(RpcWorkerConstants.PythonTreadpoolThreadCount, pythonTreadpoolThreadCount);
             environment.SetEnvironmentVariable(RpcWorkerConstants.PSWorkerInProcConcurrencyUpperBound, pSWorkerInProcConcurrencyUpperBound);
 
-            RpcWorkerConcurrencyOptionsSetup setup = new RpcWorkerConcurrencyOptionsSetup(config, environment);
-            RpcWorkerConcurrencyOptions options = new RpcWorkerConcurrencyOptions();
+            WorkerConcurrencyOptionsSetup setup = new WorkerConcurrencyOptionsSetup(config, environment);
+            WorkerConcurrencyOptions options = new WorkerConcurrencyOptions();
             setup.Configure(options);
 
             Assert.Equal(options.Enabled, enabled);
@@ -53,16 +53,16 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Configuration
         {
             IConfiguration config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string>
             {
-                [$"{nameof(RpcWorkerConcurrencyOptions)}:MaxWorkerCount"] = "1",
-                [$"{nameof(RpcWorkerConcurrencyOptions)}:LatencyThreshold"] = "00:00:03"
+                [$"{nameof(WorkerConcurrencyOptions)}:MaxWorkerCount"] = "1",
+                [$"{nameof(WorkerConcurrencyOptions)}:LatencyThreshold"] = "00:00:03"
             })
             .Build();
 
             TestEnvironment environment = new TestEnvironment();
             environment.SetEnvironmentVariable(RpcWorkerConstants.FunctionWorkerDynamicConcurrencyEnabledSettingName, "true");
 
-            RpcWorkerConcurrencyOptionsSetup setup = new RpcWorkerConcurrencyOptionsSetup(config, environment);
-            RpcWorkerConcurrencyOptions options = new RpcWorkerConcurrencyOptions();
+            WorkerConcurrencyOptionsSetup setup = new WorkerConcurrencyOptionsSetup(config, environment);
+            WorkerConcurrencyOptions options = new WorkerConcurrencyOptions();
             setup.Configure(options);
 
             Assert.Equal(options.MaxWorkerCount, 1);

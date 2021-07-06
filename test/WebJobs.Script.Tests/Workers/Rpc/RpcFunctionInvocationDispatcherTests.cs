@@ -519,7 +519,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers.Rpc
                 WorkerConfigs = TestHelpers.GetTestWorkerConfigs(processCountValue: maxProcessCountValue, processStartupInterval: intervals,
                                     processRestartInterval: intervals, processShutdownTimeout: TimeSpan.FromSeconds(1))
             };
-            var concurrencyOptions = Options.Create(new RpcWorkerConcurrencyOptions());
+            var concurrencyOptions = Options.Create(new WorkerConcurrencyOptions());
             IRpcWorkerChannelFactory testLanguageWorkerChannelFactory = new TestRpcWorkerChannelFactory(eventManager, _testLogger, scriptOptions.Value.RootScriptPath, throwOnProcessStartUp);
             IWebHostRpcWorkerChannelManager testWebHostLanguageWorkerChannelManager = new TestRpcWorkerChannelManager(eventManager, _testLogger, scriptOptions.Value.RootScriptPath, testLanguageWorkerChannelFactory);
             IJobHostRpcWorkerChannelManager jobHostLanguageWorkerChannelManager = new JobHostRpcWorkerChannelManager(_testLoggerFactory);

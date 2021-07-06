@@ -11,29 +11,31 @@ using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 
-namespace Microsoft.Azure.WebJobs.Script.Tests.Workers.Rpc
+namespace Microsoft.Azure.WebJobs.Script.Tests.Workers
 {
-    public class RpcWorkerChannelMonitorTest
+    public class WorkerChannelMonitorTest
     {
         [Fact]
         public async Task GetStats_StartsTimer()
         {
-            Mock<IRpcWorkerChannel> channelMock = new Mock<IRpcWorkerChannel>(MockBehavior.Strict);
-            Mock<IRpcWorkerConcurrencyChannel> concurrencyChannelMock = channelMock.As<IRpcWorkerConcurrencyChannel>();
-            concurrencyChannelMock.Setup(x => x.GetWorkerStatusResponseAsync(TimeSpan.FromMilliseconds(200))).Returns(() =>
+            Mock<IWorkerChannel> channelMock = new Mock<IWorkerChannel>(MockBehavior.Strict);
+            channelMock.Setup(x => x.GetWorkerStatusAsync()).Returns(async () =>
             {
-                TimeSpan? timespan = TimeSpan.FromMilliseconds(50);
-                return Task.FromResult(timespan);
+                return await Task.FromResult(
+                    new WorkerStatus()
+                    {
+                        Latency = TimeSpan.FromMilliseconds(50)
+                    });
             });
-            var options = Options.Create(new RpcWorkerConcurrencyOptions()
+            var options = Options.Create(new WorkerConcurrencyOptions()
             {
                 Enabled = true,
                 CheckInterval = TimeSpan.FromMilliseconds(100),
                 LatencyThreshold = TimeSpan.FromMilliseconds(200)
             });
-            var monitor = new RpcWorkerChannelMonitor(channelMock.Object, options);
+            var monitor = new WorkerChannelMonitor(channelMock.Object, options);
 
-            RpcWorkerStats stats = null;
+            WorkerStats stats = null;
             await TestHelpers.Await(() =>
             {
                 stats = monitor.GetStats();
@@ -46,23 +48,25 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers.Rpc
         [Fact]
         public async Task GetStats_DoesNot_StartTimer()
         {
-            Mock<IRpcWorkerChannel> channelMock = new Mock<IRpcWorkerChannel>(MockBehavior.Strict);
-            Mock<IRpcWorkerConcurrencyChannel> concurrencyChannelMock = channelMock.As<IRpcWorkerConcurrencyChannel>();
-            concurrencyChannelMock.Setup(x => x.GetWorkerStatusResponseAsync(TimeSpan.FromMilliseconds(200))).Returns(() =>
+            Mock<IWorkerChannel> channelMock = new Mock<IWorkerChannel>(MockBehavior.Strict);
+            channelMock.Setup(x => x.GetWorkerStatusAsync()).Returns(async () =>
             {
-                TimeSpan? timespan = TimeSpan.FromMilliseconds(50);
-                return Task.FromResult(timespan);
+                return await Task.FromResult(
+                    new WorkerStatus()
+                    {
+                        Latency = TimeSpan.FromMilliseconds(50)
+                    });
             });
-            var options = Options.Create(new RpcWorkerConcurrencyOptions()
+            var options = Options.Create(new WorkerConcurrencyOptions()
             {
                 Enabled = false,
                 CheckInterval = TimeSpan.FromMilliseconds(100),
                 LatencyThreshold = TimeSpan.FromMilliseconds(200)
             });
-            var monitor = new RpcWorkerChannelMonitor(channelMock.Object, options);
+            var monitor = new WorkerChannelMonitor(channelMock.Object, options);
 
             await Task.Delay(1000);
-            RpcWorkerStats stats = monitor.GetStats();
+            WorkerStats stats = monitor.GetStats();
 
             Assert.True(stats.LatencyHistory.Count() == 0);
         }

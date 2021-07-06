@@ -5,20 +5,20 @@ using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.Options;
 
-namespace Microsoft.Azure.WebJobs.Script.Workers.Rpc
+namespace Microsoft.Azure.WebJobs.Script.Workers
 {
-    internal class RpcWorkerChannelMonitor : IDisposable
+    internal class WorkerChannelMonitor : IDisposable
     {
         private readonly List<TimeSpan> _workerStatusLatecyHistory = new List<TimeSpan>();
-        private readonly IOptions<RpcWorkerConcurrencyOptions> _concurrencyOptions;
+        private readonly IOptions<WorkerConcurrencyOptions> _concurrencyOptions;
 
-        private IRpcWorkerChannel _channel;
+        private IWorkerChannel _channel;
         private object _syncLock = new object();
 
         private System.Timers.Timer _timer;
         private bool _disposed = false;
 
-        internal RpcWorkerChannelMonitor(IRpcWorkerChannel channel, IOptions<RpcWorkerConcurrencyOptions> concurrencyOptions)
+        internal WorkerChannelMonitor(IWorkerChannel channel, IOptions<WorkerConcurrencyOptions> concurrencyOptions)
         {
             _channel = channel;
             _concurrencyOptions = concurrencyOptions;
@@ -45,14 +45,14 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Rpc
             }
         }
 
-        public RpcWorkerStats GetStats()
+        public WorkerStats GetStats()
         {
             EnsureTimerStarted();
 
-            RpcWorkerStats stats = null;
+            WorkerStats stats = null;
             lock (_syncLock)
             {
-                stats = new RpcWorkerStats()
+                stats = new WorkerStats()
                 {
                     LatencyHistory = _workerStatusLatecyHistory
                 };
@@ -69,14 +69,8 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Rpc
 
             try
             {
-                if (_channel is IRpcWorkerConcurrencyChannel concurrencyChannel)
-                {
-                    TimeSpan? latency = await concurrencyChannel.GetWorkerStatusResponseAsync(_concurrencyOptions.Value.LatencyThreshold);
-                    if (latency != null)
-                    {
-                        AddSample(_workerStatusLatecyHistory, latency.Value);
-                    }
-                }
+                WorkerStatus workerStatus = await _channel.GetWorkerStatusAsync();
+                AddSample(_workerStatusLatecyHistory, workerStatus.Latency);
             }
             catch
             {

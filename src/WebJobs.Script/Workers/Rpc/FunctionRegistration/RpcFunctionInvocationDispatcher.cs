@@ -31,7 +31,7 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Rpc
         private readonly IApplicationLifetime _applicationLifetime;
         private readonly SemaphoreSlim _startWorkerProcessSLock = new SemaphoreSlim(1, 1);
         private readonly TimeSpan _thresholdBetweenRestarts = TimeSpan.FromMinutes(WorkerConstants.WorkerRestartErrorIntervalThresholdInMinutes);
-        private readonly IOptions<RpcWorkerConcurrencyOptions> _concurrencyOptions;
+        private readonly IOptions<WorkerConcurrencyOptions> _concurrencyOptions;
 
         private IScriptEventManager _eventManager;
         private IEnumerable<RpcWorkerConfig> _workerConfigs;
@@ -68,7 +68,7 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Rpc
             IJobHostRpcWorkerChannelManager jobHostLanguageWorkerChannelManager,
             IOptions<ManagedDependencyOptions> managedDependencyOptions,
             IRpcFunctionInvocationDispatcherLoadBalancer functionDispatcherLoadBalancer,
-            IOptions<RpcWorkerConcurrencyOptions> concurrencyOptions)
+            IOptions<WorkerConcurrencyOptions> concurrencyOptions)
         {
             _metricsLogger = metricsLogger;
             _scriptOptions = scriptHostOptions.Value;
@@ -367,6 +367,11 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Rpc
             await DisposeAndRestartWorkerChannel(workerRestart.Language, workerRestart.WorkerId);
         }
 
+        public async Task StartWorkerChannel()
+        {
+            await StartWorkerChannel(null);
+        }
+
         private async Task DisposeAndRestartWorkerChannel(string runtime, string workerId, Exception workerException = null)
         {
             if (_disposing || _disposed)
@@ -412,7 +417,7 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Rpc
             return string.Equals(_workerRuntime, runtime, StringComparison.InvariantCultureIgnoreCase) && (isWebHostChannel || isJobHostChannel);
         }
 
-        internal async Task StartWorkerChannel(string runtime)
+        private async Task StartWorkerChannel(string runtime)
         {
             if (_disposing || _disposed)
             {

@@ -8,32 +8,33 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Script.Workers.Rpc;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Microsoft.Azure.WebJobs.Script.Workers.Rpc
+namespace Microsoft.Azure.WebJobs.Script.Workers
 {
-    internal class RpcWorkerConcurrencyManager : IHostedService, IDisposable
+    internal class WorkerConcurrencyManager : IHostedService, IDisposable
     {
         private readonly TimeSpan _logStateInterval = TimeSpan.FromSeconds(60);
-        private readonly IOptions<RpcWorkerConcurrencyOptions> _concurrencyOptions;
+        private readonly IOptions<WorkerConcurrencyOptions> _concurrencyOptions;
         private readonly ILogger _logger;
         private readonly IFunctionInvocationDispatcherFactory _functionInvocationDispatcherFactory;
 
-        private RpcFunctionInvocationDispatcher _dispatcher;
+        private IFunctionInvocationDispatcher _functionInvocationDispatcher;
         private System.Timers.Timer _timer;
         private Stopwatch _addWorkerStopWatch = Stopwatch.StartNew();
         private Stopwatch _logStateStopWatch = Stopwatch.StartNew();
         private bool _disposed = false;
 
-        public RpcWorkerConcurrencyManager(IFunctionInvocationDispatcherFactory functionInvocationDispatcherFactory,
-            IOptions<RpcWorkerConcurrencyOptions> concurrencyOptions, ILoggerFactory loggerFactory)
+        public WorkerConcurrencyManager(IFunctionInvocationDispatcherFactory functionInvocationDispatcherFactory,
+            IOptions<WorkerConcurrencyOptions> concurrencyOptions, ILoggerFactory loggerFactory)
         {
             _concurrencyOptions = concurrencyOptions ?? throw new ArgumentNullException(nameof(concurrencyOptions));
             _functionInvocationDispatcherFactory = functionInvocationDispatcherFactory ?? throw new ArgumentNullException(nameof(functionInvocationDispatcherFactory));
 
-            _logger = loggerFactory?.CreateLogger<RpcWorkerConcurrencyManager>();
+            _logger = loggerFactory?.CreateLogger<WorkerConcurrencyManager>();
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)
@@ -43,7 +44,14 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Rpc
                 // Delay monitoring
                 await Task.Delay(_concurrencyOptions.Value.AdjustmentPeriod);
 
-                _logger.LogDebug($"Starting language worker concurrency monitoring. Options: {_concurrencyOptions.Value.Format()}");
+                _functionInvocationDispatcher = _functionInvocationDispatcherFactory.GetFunctionDispatcher();
+                if (_functionInvocationDispatcher is HttpFunctionInvocationDispatcher)
+                {
+                    _logger.LogDebug($"Http worker concurrency is not supported.");
+                    return;
+                }
+
+                _logger.LogDebug($"Starting worker concurrency monitoring. Options: {_concurrencyOptions.Value.Format()}");
                 _timer = new System.Timers.Timer()
                 {
                     AutoReset = false,
@@ -52,8 +60,6 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Rpc
 
                 _timer.Elapsed += OnTimer;
                 _timer.Start();
-
-                _dispatcher = _functionInvocationDispatcherFactory.GetFunctionDispatcher() as RpcFunctionInvocationDispatcher;
             }
             else
             {
@@ -75,18 +81,18 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Rpc
 
         internal async void OnTimer(object sender, System.Timers.ElapsedEventArgs e)
         {
-            if (_disposed && _dispatcher == null)
+            if (_disposed && _functionInvocationDispatcher == null)
             {
                 return;
             }
 
             try
             {
-                IEnumerable<IRpcWorkerChannel> workerChannels = await _dispatcher.GetAllWorkerChannelsAsync();
+                var workerStatuses = await _functionInvocationDispatcher.GetWorkerStatusesAsync();
 
-                if (AddWorkerIfNeeded(workerChannels, _addWorkerStopWatch.Elapsed))
+                if (AddWorkerIfNeeded(workerStatuses, _addWorkerStopWatch.Elapsed))
                 {
-                    await _dispatcher.StartWorkerChannel(null);
+                    await _functionInvocationDispatcher.StartWorkerChannel();
                     _logger.LogDebug("New worker is added.");
                     _addWorkerStopWatch.Restart();
                 }
@@ -99,7 +105,7 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Rpc
             _timer.Start();
         }
 
-        internal bool AddWorkerIfNeeded(IEnumerable<IRpcWorkerChannel> workerChannels, TimeSpan elaspsedFromLastAdding)
+        internal bool AddWorkerIfNeeded(IDictionary<string, WorkerStatus> workerStatuses, TimeSpan elaspsedFromLastAdding)
         {
             if (elaspsedFromLastAdding < _concurrencyOptions.Value.AdjustmentPeriod)
             {
@@ -107,36 +113,28 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Rpc
             }
 
             bool result = false;
-            IEnumerable<IRpcWorkerChannel> initializedWorkers = workerChannels.Where(ch => ch.IsChannelReadyForInvocations());
-
-            // Check if there are initializing language workers
-            int notInitializedWorkersCount = workerChannels.Count() - initializedWorkers.Count();
-
-            if (notInitializedWorkersCount == 0)
+            if (workerStatuses.All(x => x.Value.IsReady))
             {
                 // Check how many channels are oveloaded
                 List<WorkerDescription> descriptions = new List<WorkerDescription>();
-                foreach (IRpcWorkerChannel channel in initializedWorkers)
+                foreach (string key in workerStatuses.Keys)
                 {
-                    if (channel is IRpcWorkerConcurrencyChannel concurrencyChannel)
+                    WorkerStatus workerStatus = workerStatuses[key];
+                    bool overloaded = IsOverloaded(workerStatus);
+                    descriptions.Add(new WorkerDescription()
                     {
-                        WorkerStatus workerStatus = concurrencyChannel.GetWorkerStatus();
-                        bool overloaded = IsOverloaded(workerStatus);
-                        descriptions.Add(new WorkerDescription()
-                        {
-                            Channel = channel,
-                            WorkerStatus = workerStatus,
-                            Overloaded = overloaded
-                        });
-                    }
+                        WorkerId = key,
+                        WorkerStatus = workerStatus,
+                        Overloaded = overloaded
+                    });
                 }
 
                 int overloadedCount = descriptions.Where(x => x.Overloaded == true).Count();
                 if (overloadedCount > 0)
                 {
-                    if (initializedWorkers.Count() < _concurrencyOptions.Value.MaxWorkerCount)
+                    if (workerStatuses.Count() < _concurrencyOptions.Value.MaxWorkerCount)
                     {
-                        _logger.LogDebug($"Adding a new worker, overloaded workers = {overloadedCount}, initialized workers = {initializedWorkers.Count()} ");
+                        _logger.LogDebug($"Adding a new worker, overloaded workers = {overloadedCount}, initialized workers = {workerStatuses.Count()} ");
                         result = true;
                     }
                 }
@@ -194,9 +192,8 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Rpc
                     }
                 }
             }
-            string executingFunctionsCount = desc.Channel.FunctionInputBuffers != null ? desc.Channel.FunctionInputBuffers.Sum(p => p.Value.Count).ToString() : string.Empty;
 
-            return $@"Worker process stats: ProcessId={desc.Channel.Id}, Overloaded={desc.Overloaded},ExecutioningFunctions = {executingFunctionsCount}
+            return $@"Worker process stats: ProcessId={desc.WorkerId}, Overloaded={desc.Overloaded}
 CpuLoadHistory=({formattedLoadHistory}), c={cpuAvg}, MaxLoad={cpuMax}, 
 LatencyHistory=({formattedLatencyHistory}), AvgLatency={latencyAvg}, MaxLatency={latencyMax}";
         }
@@ -221,7 +218,7 @@ LatencyHistory=({formattedLatencyHistory}), AvgLatency={latencyAvg}, MaxLatency=
 
         internal class WorkerDescription
         {
-            public IRpcWorkerChannel Channel { get; set; }
+            public string WorkerId { get; set; }
 
             public WorkerStatus WorkerStatus { get; set; }
 

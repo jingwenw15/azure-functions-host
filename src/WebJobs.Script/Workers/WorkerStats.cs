@@ -4,9 +4,9 @@
 using System;
 using System.Collections.Generic;
 
-namespace Microsoft.Azure.WebJobs.Script.Workers.Rpc
+namespace Microsoft.Azure.WebJobs.Script.Workers
 {
-    public class RpcWorkerStats
+    public class WorkerStats
     {
         public IEnumerable<TimeSpan> LatencyHistory { get; set; }
     }

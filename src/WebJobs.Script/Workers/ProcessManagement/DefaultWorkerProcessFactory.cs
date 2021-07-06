@@ -14,10 +14,10 @@ namespace Microsoft.Azure.WebJobs.Script.Workers
 {
     internal class DefaultWorkerProcessFactory : IWorkerProcessFactory
     {
-        private readonly IOptions<RpcWorkerConcurrencyOptions> _concurrencyOptions;
+        private readonly IOptions<WorkerConcurrencyOptions> _concurrencyOptions;
         private readonly ILogger _logger;
 
-        public DefaultWorkerProcessFactory(ILoggerFactory loggerFactory, IOptions<RpcWorkerConcurrencyOptions> concurrencyOptions)
+        public DefaultWorkerProcessFactory(ILoggerFactory loggerFactory, IOptions<WorkerConcurrencyOptions> concurrencyOptions)
         {
             if (loggerFactory == null)
             {
