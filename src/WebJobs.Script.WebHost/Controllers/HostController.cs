@@ -322,8 +322,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
 
         [HttpGet]
         [Route("admin/host/Profile/{duration}/{traceName}")]
-        //[Authorize(Policy = PolicyNames.AdminAuthLevel)]
-        public IActionResult Profiler(string traceName, int duration)
+        [Authorize(Policy = PolicyNames.AdminAuthLevelOrInternal)]
+        public async Task<IActionResult> Profiler(string traceName, int duration)
         {
             // reference: https://github.com/dotnet/diagnostics/blob/main/documentation/diagnostics-client-library-instructions.md
             var allProviders = new List<EventPipeProvider>()
@@ -332,8 +332,11 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
                 new EventPipeProvider("Microsoft-Windows-DotNETRuntimePrivate", EventLevel.Verbose, keywords: 0x4002000b, arguments: null),
                 new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", EventLevel.Verbose, keywords: 0x0, arguments: null),
                 new EventPipeProvider("System.Threading.Tasks.TplEventSource", EventLevel.Verbose, keywords: 0x1 | 0x2 | 0x4 | 0x40 | 0x80, arguments: null),
-                // Microsoft-ApplicationInsights-DataRelay
-                new EventPipeProvider("Microsoft-ApplicationInsights-Data", EventLevel.Verbose, keywords: 0xffffffff, arguments: null),
+                new EventPipeProvider("Microsoft-ApplicationInsights-Data", EventLevel.Verbose, keywords: 0x401, arguments: null),
+                new EventPipeProvider("System.Runtime", EventLevel.Verbose, keywords: 0xffffffff, arguments: new Dictionary<string, string>
+                {
+                    ["EventCounterIntervalSec"] = "1"
+                }),
             };
             var client = new DiagnosticsClient(Process.GetCurrentProcess().Id);
             using (var newSession = client.StartEventPipeSession(allProviders))
@@ -341,7 +344,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Controllers
                 Task trace = WriteTraceAsync(traceName, newSession);
 
                 // wait for trace to be copied for duration in millisseconds
-                trace.Wait(duration * 1000);
+                await Task.Delay(duration * 1000).ConfigureAwait(false);
                 newSession.Stop();
             }
             return Accepted();
